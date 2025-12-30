@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edukasi Seputar Kudus - Ocean Edition</title>
+    <!-- Library untuk Export Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --deep-blue: #001d3d;
+            --ocean-blue: #003566;
+            --light-blue: #00a8e8;
+            --sand: #fcf6bd;
+            --coral: #ff9f1c;
+            --wrong-red: #ff4d4d;
+            --right-green: #2ecc71;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(180deg, #0077b6 0%, #03045e 100%);
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* Ornamen Laut 3D & Animasi */
+        .ocean-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bubble {
+            position: absolute;
+            bottom: -50px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: rise 8s infinite ease-in;
+        }
+
+        @keyframes rise {
+            0% { transform: translateY(0) scale(1); opacity: 0.5; }
+            100% { transform: translateY(-110vh) scale(1.5); opacity: 0; }
+        }
+
+        .decoration {
+            position: absolute;
+            font-size: 4rem;
+            filter: drop-shadow(5px 5px 15px rgba(0,0,0,0.5));
+            z-index: -1;
+            user-select: none;
+        }
+
+        /* Container Utama */
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            padding: 40px;
+            border-radius: 30px;
+            border: 2px solid rgba(255,255,255,0.2);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            width: 90%;
+            max-width: 900px;
+            text-align: center;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        h1 { font-size: 2.5rem; margin-bottom: 20px; text-shadow: 2px 4px 10px rgba(0,0,0,0.5); }
+
+        .input-group { margin-bottom: 15px; text-align: left; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.9rem; }
+        input {
+            width: 100%; padding: 12px; border-radius: 12px; border: none;
+            background: rgba(255,255,255,0.9); color: var(--deep-blue);
+            font-size: 1rem; outline: none; box-sizing: border-box;
+        }
+
+        .btn-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+
+        .btn {
+            background: var(--coral); color: white; border: none;
+            padding: 15px 30px; border-radius: 50px;
+            font-size: 1rem; font-weight: 800; cursor: pointer;
+            transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+        }
+
+        .btn:hover { transform: translateY(-3px) scale(1.05); filter: brightness(1.1); }
+        .btn-excel { background: #27ae60; }
+        .btn-close { background: #e74c3c; }
+
+        /* Game Area */
+        #game-area { display: none; }
+        .matching-container {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 15px; margin-top: 20px;
+        }
+
+        .item {
+            background: rgba(255,255,255,0.15); padding: 15px;
+            border-radius: 15px; cursor: pointer;
+            border: 2px solid transparent; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center;
+            min-height: 50px; font-size: 0.9rem; font-weight: 600;
+        }
+
+        .item.selected { border-color: var(--coral); background: rgba(255,159,28,0.3); transform: scale(1.02); }
+        .item.matched { background: var(--right-green); opacity: 0.8; pointer-events: none; border-color: white; }
+        .item.wrong { background: var(--wrong-red); border-color: white; animation: shake 0.4s; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* Result Area */
+        #result-area { display: none; }
+        .stats-box {
+            background: rgba(0,0,0,0.3); padding: 25px;
+            border-radius: 20px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Background Ornaments -->
+    <div class="ocean-bg" id="ocean-elements">
+        <span class="decoration" style="bottom: 20px; left: 50px;">🐚</span>
+        <span class="decoration" style="bottom: 50px; right: 80px;">🪸</span>
+        <span class="decoration" style="top: 100px; left: 100px;">🐠</span>
+        <span class="decoration" style="bottom: 150px; right: 200px;">🐙</span>
+        <span class="decoration" style="top: 50%; left: 10%;">🐡</span>
+    </div>
+
+    <!-- Halaman 1: MULAI BELAJAR -->
+    <div id="login-area" class="container">
+        <h1>EDUKASI SEPUTAR KUDUS</h1>
+        <p>Silahkan lengkapi data diri untuk memulai permainan</p>
+        
+        <div class="input-group">
+            <label>Nama Lengkap:</label>
+            <input type="text" id="input-nama" placeholder="Contoh: Budi Santoso">
+        </div>
+        <div class="input-group">
+            <label>Nomor Absen:</label>
+            <input type="number" id="input-absen" placeholder="Contoh: 12">
+        </div>
+        <div class="input-group">
+            <label>Kelas:</label>
+            <input type="text" id="input-kelas" placeholder="Contoh: 5 SD">
+        </div>
+
+        <div class="btn-container">
+            <button class="btn" onclick="startLearning()">MULAI BELAJAR</button>
+            <button class="btn btn-excel" onclick="downloadExcel()">DOWNLOAD EXCEL</button>
+        </div>
+    </div>
+
+    <!-- Halaman 2: GAME AREA -->
+    <div id="game-area" class="container">
+        <h2>Jodohkan Soal dan Jawaban</h2>
+        <p>Klik satu soal di kiri, lalu klik jawaban yang benar di kanan</p>
+        <div class="matching-container">
+            <div id="questions-col"></div>
+            <div id="answers-col"></div>
+        </div>
+        <button class="btn" id="finish-btn" onclick="finishGame()" style="margin-top: 30px;">SELESAI</button>
+    </div>
+
+    <!-- Halaman 3: HASIL -->
+    <div id="result-area" class="container">
+        <h1>HASIL BELAJAR</h1>
+        <div class="stats-box" id="stats-content"></div>
+        <div class="btn-container">
+            <button class="btn" onclick="playAgain()">MAIN LAGI</button>
+            <button class="btn btn-close" onclick="closeGame()">TUTUP</button>
+        </div>
+    </div>
+
+    <script>
+        const dataMaster = [
+            { q: "Provinsi letak Kota Kudus", a: "TENGAH" },
+            { q: "Tokoh penyebar agama Islam", a: "SUNAN KUDUS" },
+            { q: "Bangunan corak Hindu-Buddha", a: "MENARA" },
+            { q: "Oleh-oleh khas Kudus", a: "JENANG" },
+            { q: "Kudus dikenal sebagai kota", a: "KRETEK" },
+            { q: "Museum sejarah rokok kretek", a: "MUSEUM KRETEK" },
+            { q: "Gunung di sebelah utara Kudus", a: "MURIA" },
+            { q: "Makanan khas Kudus berkuah", a: "SOTO" },
+            { q: "Daerah lokasi Pabrik Gula", a: "RENDENG" },
+            { q: "Tabuh bedug tanda puasa", a: "DANDANGAN" }
+        ];
+
+        let selectedQuestion = null;
+        let selectedAnswer = null;
+        let score = 0;
+        let historyData = JSON.parse(localStorage.getItem('gameHistoryKudus')) || [];
+
+        // Inisialisasi gelembung
+        function initBubbles() {
+            const bg = document.getElementById('ocean-elements');
+            for (let i = 0; i < 20; i++) {
+                const b = document.createElement('div');
+                b.className = 'bubble';
+                const size = Math.random() * 30 + 10 + 'px';
+                b.style.width = size; b.style.height = size;
+                b.style.left = Math.random() * 100 + 'vw';
+                b.style.animationDuration = (Math.random() * 5 + 5) + 's';
+                b.style.animationDelay = (Math.random() * 5) + 's';
+                bg.appendChild(b);
+            }
+        }
+        initBubbles();
+
+        function speak(text) {
+            const msg = new SpeechSynthesisUtterance();
+            msg.text = text;
+            msg.lang = 'id-ID';
+            window.speechSynthesis.speak(msg);
+        }
+
+        function startLearning() {
+            const nama = document.getElementById('input-nama').value;
+            const absen = document.getElementById('input-absen').value;
+            const kelas = document.getElementById('input-kelas').value;
+
+            if (!nama || !absen || !kelas) {
+                alert("Mohon lengkapi Nama, Absen, dan Kelas!");
+                return;
+            }
+
+            speak("Assalamualaikum warahmatullahi wabarakatuh, selamat datang di game teka-teki edukasi, selamat belajar");
+            
+            document.getElementById('login-area').style.display = 'none';
+            document.getElementById('game-area').style.display = 'block';
+            renderGame();
+        }
+
+        function renderGame() {
+            const qCol = document.getElementById('questions-col');
+            const aCol = document.getElementById('answers-col');
+            
+            // Shuffle
+            const questions = [...dataMaster].sort(() => Math.random() - 0.5);
+            const answers = [...dataMaster].sort(() => Math.random() - 0.5);
+
+            qCol.innerHTML = '';
+            aCol.innerHTML = '';
+
+            questions.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerText = item.q;
+                div.dataset.value = item.a;
+                div.onclick = () => selectQ(div);
+                qCol.appendChild(div);
+            });
+
+            answers.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerText = item.a;
+                div.onclick = () => selectA(div);
+                aCol.appendChild(div);
+            });
+        }
+
+        function selectQ(el) {
+            if (el.classList.contains('matched')) return;
+            document.querySelectorAll('#questions-col .item').forEach(i => i.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedQuestion = el;
+            checkMatch();
+        }
+
+        function selectA(el) {
+            if (el.classList.contains('matched')) return;
+            document.querySelectorAll('#answers-col .item').forEach(i => i.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedAnswer = el;
+            checkMatch();
+        }
+
+        function checkMatch() {
+            if (selectedQuestion && selectedAnswer) {
+                if (selectedQuestion.dataset.value === selectedAnswer.innerText) {
+                    // Benar
+                    selectedQuestion.classList.add('matched');
+                    selectedAnswer.classList.add('matched');
+                    selectedQuestion.classList.remove('selected');
+                    selectedAnswer.classList.remove('selected');
+                    score += 10;
+                    selectedQuestion = null;
+                    selectedAnswer = null;
+                } else {
+                    // Salah
+                    const qTemp = selectedQuestion;
+                    const aTemp = selectedAnswer;
+                    qTemp.classList.add('wrong');
+                    aTemp.classList.add('wrong');
+                    
+                    setTimeout(() => {
+                        qTemp.classList.remove('wrong', 'selected');
+                        aTemp.classList.remove('wrong', 'selected');
+                    }, 500);
+                    
+                    selectedQuestion = null;
+                    selectedAnswer = null;
+                }
+            }
+        }
+
+        function finishGame() {
+            const nama = document.getElementById('input-nama').value;
+            const absen = document.getElementById('input-absen').value;
+            const kelas = document.getElementById('input-kelas').value;
+
+            document.getElementById('game-area').style.display = 'none';
+            document.getElementById('result-area').style.display = 'block';
+
+            document.getElementById('stats-content').innerHTML = `
+                <p><strong>Nama:</strong> ${nama}</p>
+                <p><strong>No Absen:</strong> ${absen}</p>
+                <p><strong>Kelas:</strong> ${kelas}</p>
+                <h1 style="color: var(--coral); margin-top:10px;">SKOR: ${score}</h1>
+            `;
+
+            // Simpan data ke memori
+            historyData.push({
+                "Nomor Absen": absen,
+                "Nama": nama,
+                "Kelas": kelas,
+                "Skor": score,
+                "Waktu": new Date().toLocaleString('id-ID')
+            });
+            localStorage.setItem('gameHistoryKudus', JSON.stringify(historyData));
+        }
+
+        function downloadExcel() {
+            if (historyData.length === 0) {
+                alert("Belum ada data skor yang terekam.");
+                return;
+            }
+            const worksheet = XLSX.utils.json_to_sheet(historyData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Hasil Belajar");
+            XLSX.writeFile(workbook, "Data_Nilai_Edukasi_Kudus.xlsx");
+        }
+
+        function playAgain() {
+            score = 0;
+            document.getElementById('result-area').style.display = 'none';
+            document.getElementById('login-area').style.display = 'block';
+        }
+
+        function closeGame() {
+            speak("terima kasih, semoga bermanfaat");
+            setTimeout(() => {
+                alert("Game ditutup. Sampai jumpa!");
+                location.reload();
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
